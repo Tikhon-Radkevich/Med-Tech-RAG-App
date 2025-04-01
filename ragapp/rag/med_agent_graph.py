@@ -50,20 +50,16 @@ class RetrievalResult(BaseModel):
     """Retrieved information for answering a query."""
 
     sources: list[SourceDocument] = Field(
-        description="Documents and pages, relevant to the query."
+        description="Documents and pages, relevant to the query. Empty list if no context provided."
     )
-    answer: str = Field(description="Generated answer to the question.")
+    answer: str = Field(description="Generated answer to the question, if context provided.")
 
 
 class VectorSearchParams(BaseModel):
     """Parameters for vector-based retrieval."""
 
-    top_k: int = Field(default=5, description="Number of documents to retrieve.")
-    filter: dict[str, str] = Field(
-        default=None,
-        description="Device filter.",
-        examples=[{"device": DeviceEnum.mizuho_6800}],
-    )
+    k: int = Field(default=5, description="Number of documents to retrieve.")
+    filter: dict[str, str] = Field(default=None, description="Device filter.")
 
 
 class QueryState(BaseModel):
@@ -117,8 +113,8 @@ class MedTechAgent:
 
         if classification.device in list(DeviceEnum):
             search_params = dict(
-                top_k=state.search_params.top_k,
-                filters=dict(device=classification.device),
+                k=state.search_params.k,
+                filter=dict(device=classification.device),
             )
             update.update(dict(search_params=VectorSearchParams(**search_params)))
             goto = self._retrieve_documents.__name__
@@ -134,6 +130,7 @@ class MedTechAgent:
         return Command(goto=goto, update=update)
 
     def _retrieve_documents(self, state: QueryState):
+        print(state.search_params.model_dump())
         retrieved_docs = self.vector_store.similarity_search(
             state.question, **state.search_params.model_dump()
         )

@@ -64,10 +64,10 @@ def main():
                 inputs = {"question": text, "k": 5}
                 response = QueryState(**agent.invoke(inputs))
 
-                if response.retriever_out is not None:
-                    res = response.retriever_out.answer
+                if response.retrieval_result is not None:
+                    res = response.retrieval_result.answer
                 else:
-                    res = response.device_classificator_out.reasoning
+                    res = response.device_classification.reasoning
 
                 st.info(res)
             else:
