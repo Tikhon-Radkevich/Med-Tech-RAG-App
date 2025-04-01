@@ -130,7 +130,6 @@ class MedTechAgent:
         return Command(goto=goto, update=update)
 
     def _retrieve_documents(self, state: QueryState):
-        print(state.search_params.model_dump())
         retrieved_docs = self.vector_store.similarity_search(
             state.question, **state.search_params.model_dump()
         )
