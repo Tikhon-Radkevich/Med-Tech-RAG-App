@@ -1,0 +1,39 @@
+[project]
+name = "ragapp"
+version = "0.1.0"
+description = "RAG application."
+requires-python = ">=3.11"
+dependencies = [
+    "bs4>=0.0.2",
+    "chromadb==0.4.14",
+    "dspy>=2.6.14",
+    "dspy-ai>=2.6.15",
+    "faiss-cpu>=1.10.0",
+    "jinja2>=3.1.6",
+    "jupyter>=1.1.1",
+    "langchain-anthropic>=0.3.10",
+    "langchain-chroma>=0.2.2",
+    "langchain-community>=0.3.20",
+    "langchain-core>=0.3.48",
+    "langchain-deepseek>=0.1.2",
+    "langchain-huggingface>=0.1.2",
+    "langchain-openai>=0.3.8",
+    "langchain-text-splitters>=0.3.7",
+    "langchain[groq,together]>=0.3.21",
+    "langchainhub>=0.1.21",
+    "langgraph>=0.3.18",
+    "lark>=1.2.2",
+    "litellm>=1.63.7",
+    "notebook>=7.3.3",
+    "openai>=1.61.0",
+    "pdfplumber>=0.11.5",
+    "streamlit>=1.44.0",
+    "tiktoken>=0.9.0",
+    "torch>=2.6.0",
+    "trulens>=1.4.7",
+    "trulens-apps-langchain>=1.4.7",
+    "trulens-eval>=1.4.7",
+    "trulens-providers-langchain>=1.4.7",
+    "trulens-providers-openai>=1.4.7",
+]
+
