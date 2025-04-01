@@ -52,7 +52,9 @@ class RetrievalResult(BaseModel):
     sources: list[SourceDocument] = Field(
         description="Documents and pages, relevant to the query. Empty list if no context provided."
     )
-    answer: str = Field(description="Generated answer to the question, if context provided.")
+    answer: str = Field(
+        description="Generated answer to the question, if context provided."
+    )
 
 
 class VectorSearchParams(BaseModel):

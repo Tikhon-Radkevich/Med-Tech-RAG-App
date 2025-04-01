@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 
 import torch
 
-torch.classes.__path__ = []
+torch.classes.__path__ = []  # https://github.com/VikParuchuri/marker/issues/442#issuecomment-2636393925
 
 import streamlit as st
 
