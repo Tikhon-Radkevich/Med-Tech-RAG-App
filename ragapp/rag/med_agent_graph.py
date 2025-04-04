@@ -133,9 +133,7 @@ class MedTechAgent:
         update = dict(device_classification=classification)
 
         if classification.device in list(DeviceEnum):
-            update.update(dict(filter=dict(device=classification.device)))
             goto = self._retrieve_documents.__name__
-
         elif classification.device is None:
             goto = END
         else:
