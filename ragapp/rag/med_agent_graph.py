@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Any, Callable
 from enum import Enum
 
 from langgraph.types import Command
@@ -7,8 +7,10 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain.chat_models import init_chat_model
 
-from langchain_core.vectorstores import VectorStore
 from langchain_core.documents import Document
+
+from langchain_chroma import Chroma
+from langchain_milvus import Milvus
 
 from ragapp.prompts.prompts import (
     device_extractor_system_prompt_formatted,
@@ -57,17 +59,11 @@ class RetrievalResult(BaseModel):
     )
 
 
-class VectorSearchParams(BaseModel):
-    """Parameters for vector-based retrieval."""
-
-    k: int = Field(default=5, description="Number of documents to retrieve.")
-    filter: dict[str, str] = Field(default=None, description="Device filter.")
-
-
 class QueryState(BaseModel):
     """State representation for the agent's decision flow."""
 
     question: str = Field(description="User query.")
+    k: int = Field(default=5, description="Number of documents to retrieve.")
     context_documents: list[Document] = Field(
         default=None, description="Retrieved documents."
     )
@@ -77,21 +73,41 @@ class QueryState(BaseModel):
     retrieval_result: RetrievalResult = Field(
         default=None, description="Final retrieval response."
     )
-    search_params: VectorSearchParams = Field(
-        default=VectorSearchParams(), description="Search parameters for retrieval."
+    state_kwargs: Optional[dict[Any, Any]] = Field(
+        description="Any kwargs to be added in response."
     )
 
 
 class MedTechAgent:
     def __init__(
-        self, vector_store: VectorStore, rag_model_name: str, device_model_name: str
+        self, vector_store: Chroma | Milvus, rag_model_name: str, device_model_name: str
     ):
         self.rag_model_name = rag_model_name
         self.device_model_name = device_model_name
         self.vector_store = vector_store
+        self._vstore_kwargs_formatter = self._get_vector_store_kwargs_formatter()
 
         self.device_classifier = self._initialize_device_classifier()
         self.answer_generator = self._initialize_answer_generator()
+
+        self.agent = self.compile()
+
+    def run(self, question: str, k: int = 5, **kwargs) -> QueryState:
+        """
+        Run query thought graph aget.
+
+        :param question: query question
+        :param k: top k values to aggregate with retriever
+        :param kwargs: any kwargs to be added in response.
+        :return: `QueryState`
+        """
+
+        invoke_kwargs = dict(
+            k=k,
+            question=question,
+            state_kwargs=kwargs,
+        )
+        return QueryState(**self.agent.invoke(invoke_kwargs))
 
     def compile(self) -> CompiledStateGraph:
         agent_graph = StateGraph(QueryState).add_node(self._classify_device)
@@ -104,6 +120,9 @@ class MedTechAgent:
         agent_graph = agent_graph.compile()
         return agent_graph
 
+    def retrieve(self, query, **similarity_search_kwargs) -> list[Document]:
+        return self.vector_store.similarity_search(query, **similarity_search_kwargs)
+
     def _classify_device(self, state: QueryState):
         classification = self.device_classifier.invoke(
             [
@@ -114,11 +133,7 @@ class MedTechAgent:
         update = dict(device_classification=classification)
 
         if classification.device in list(DeviceEnum):
-            search_params = dict(
-                k=state.search_params.k,
-                filter=dict(device=classification.device),
-            )
-            update.update(dict(search_params=VectorSearchParams(**search_params)))
+            update.update(dict(filter=dict(device=classification.device)))
             goto = self._retrieve_documents.__name__
 
         elif classification.device is None:
@@ -132,8 +147,8 @@ class MedTechAgent:
         return Command(goto=goto, update=update)
 
     def _retrieve_documents(self, state: QueryState):
-        retrieved_docs = self.vector_store.similarity_search(
-            state.question, **state.search_params.model_dump()
+        retrieved_docs = self.retrieve(
+            state.question, **self._vstore_kwargs_formatter(state)
         )
         formatted_docs = self._format_documents(retrieved_docs)
         response = self.answer_generator.invoke(
@@ -157,6 +172,20 @@ class MedTechAgent:
     def _initialize_device_classifier(self):
         model = init_chat_model(model=self.device_model_name, temperature=0)
         return model.with_structured_output(DeviceClassification)
+
+    def _get_vector_store_kwargs_formatter(self) -> Callable[[QueryState], dict]:
+        def chroma_formatter(state: QueryState):
+            return {"filter": {"device", state.device_classification.device}}
+
+        def milvus_formatter(state: QueryState):
+            return {"expr": f'device == "{state.device_classification.device}"'}
+
+        if isinstance(self.vector_store, Chroma):
+            return chroma_formatter
+        elif isinstance(self.vector_store, Milvus):
+            return milvus_formatter
+        else:
+            raise ValueError(f"Unknown vector store type: {type(self.vector_store)}")
 
     @staticmethod
     def _format_documents(docs) -> str:
