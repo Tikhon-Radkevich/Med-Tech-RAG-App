@@ -1,16 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Any, Callable
+from typing import Optional, Any
 from enum import Enum
 
 from langgraph.types import Command
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain.chat_models import init_chat_model
-
 from langchain_core.documents import Document
-
 from langchain_chroma import Chroma
-from langchain_milvus import Milvus
 
 from ragapp.prompts.prompts import (
     device_extractor_system_prompt_formatted,
@@ -52,7 +49,9 @@ class RetrievalResult(BaseModel):
     """Retrieved information for answering a query."""
 
     sources: list[SourceDocument] = Field(
-        description="Documents and pages, relevant to the query. Empty list if no context provided."
+        description="Documents and pages, relevant to the query. Empty list if no context provided. "
+                    "IMPORTANT: select only sources, that where used to form the answer. "
+                    "Skip not relevant sources."
     )
     answer: str = Field(
         description="Generated answer to the question, if context provided."
@@ -80,12 +79,11 @@ class QueryState(BaseModel):
 
 class MedTechAgent:
     def __init__(
-        self, vector_store: Chroma | Milvus, rag_model_name: str, device_model_name: str
+        self, vector_store: Chroma, rag_model_name: str, device_model_name: str
     ):
         self.rag_model_name = rag_model_name
         self.device_model_name = device_model_name
         self.vector_store = vector_store
-        self._vstore_kwargs_formatter = self._get_vector_store_kwargs_formatter()
 
         self.device_classifier = self._initialize_device_classifier()
         self.answer_generator = self._initialize_answer_generator()
@@ -120,8 +118,8 @@ class MedTechAgent:
         agent_graph = agent_graph.compile()
         return agent_graph
 
-    def retrieve(self, query, **similarity_search_kwargs) -> list[Document]:
-        return self.vector_store.similarity_search(query, **similarity_search_kwargs)
+    def retrieve(self, query: str, k: int, device: str) -> list[Document]:
+        return self.vector_store.similarity_search(query, k=k, filter={"device": device})
 
     def _classify_device(self, state: QueryState):
         classification = self.device_classifier.invoke(
@@ -146,11 +144,12 @@ class MedTechAgent:
 
     def _retrieve_documents(self, state: QueryState):
         retrieved_docs = self.retrieve(
-            state.question, **self._vstore_kwargs_formatter(state)
+            state.question, k=state.k, device=str(state.device_classification.device.value)
         )
         formatted_docs = self._format_documents(retrieved_docs)
         response = self.answer_generator.invoke(
             [
+
                 {"role": "system", "content": retriever_system_prompt},
                 {
                     "role": "user",
@@ -171,22 +170,12 @@ class MedTechAgent:
         model = init_chat_model(model=self.device_model_name, temperature=0)
         return model.with_structured_output(DeviceClassification)
 
-    def _get_vector_store_kwargs_formatter(self) -> Callable[[QueryState], dict]:
-        def chroma_formatter(state: QueryState):
-            return {"filter": {"device", state.device_classification.device}}
-
-        def milvus_formatter(state: QueryState):
-            return {"expr": f'device == "{state.device_classification.device}"'}
-
-        if isinstance(self.vector_store, Chroma):
-            return chroma_formatter
-        elif isinstance(self.vector_store, Milvus):
-            return milvus_formatter
-        else:
-            raise ValueError(f"Unknown vector store type: {type(self.vector_store)}")
-
     @staticmethod
     def _format_documents(docs) -> str:
         return "\n\n".join(
-            f"Source: {doc.metadata['pdf_title']}\n{doc.page_content}" for doc in docs
+            f"--- SOURCE {i} ---"
+            f"\nFILE: {doc.metadata['pdf_title']}"
+            f"\nPAGE: {doc.metadata['page']}"
+            f"\n{doc.page_content}"
+            for i, doc in enumerate(docs)
         )
