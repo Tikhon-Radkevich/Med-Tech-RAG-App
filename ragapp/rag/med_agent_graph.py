@@ -50,8 +50,8 @@ class RetrievalResult(BaseModel):
 
     sources: list[SourceDocument] = Field(
         description="Documents and pages, relevant to the query. Empty list if no context provided. "
-                    "IMPORTANT: select only sources, that where used to form the answer. "
-                    "Skip not relevant sources."
+        "IMPORTANT: select only sources, that where used to form the answer. "
+        "Skip not relevant sources."
     )
     answer: str = Field(
         description="Generated answer to the question, if context provided."
@@ -79,11 +79,11 @@ class QueryState(BaseModel):
 
 class MedTechAgent:
     def __init__(
-        self, vector_store: Chroma, rag_model_name: str, device_model_name: str
+        self, vector_storage: Chroma, rag_model_name: str, device_model_name: str
     ):
         self.rag_model_name = rag_model_name
         self.device_model_name = device_model_name
-        self.vector_store = vector_store
+        self.vector_storage = vector_storage
 
         self.device_classifier = self._initialize_device_classifier()
         self.answer_generator = self._initialize_answer_generator()
@@ -119,7 +119,9 @@ class MedTechAgent:
         return agent_graph
 
     def retrieve(self, query: str, k: int, device: str) -> list[Document]:
-        return self.vector_store.similarity_search(query, k=k, filter={"device": device})
+        return self.vector_storage.similarity_search(
+            query, k=k, filter={"device": device}
+        )
 
     def _classify_device(self, state: QueryState):
         classification = self.device_classifier.invoke(
@@ -144,12 +146,13 @@ class MedTechAgent:
 
     def _retrieve_documents(self, state: QueryState):
         retrieved_docs = self.retrieve(
-            state.question, k=state.k, device=str(state.device_classification.device.value)
+            state.question,
+            k=state.k,
+            device=str(state.device_classification.device.value),
         )
         formatted_docs = self._format_documents(retrieved_docs)
         response = self.answer_generator.invoke(
             [
-
                 {"role": "system", "content": retriever_system_prompt},
                 {
                     "role": "user",
@@ -177,5 +180,5 @@ class MedTechAgent:
             f"\nFILE: {doc.metadata['pdf_title']}"
             f"\nPAGE: {doc.metadata['page']}"
             f"\n{doc.page_content}"
-            for i, doc in enumerate(docs)
+            for i, doc in enumerate(docs, start=1)
         )
