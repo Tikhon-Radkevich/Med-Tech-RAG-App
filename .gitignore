@@ -4,6 +4,8 @@ models/
 .index_cache/
 .cache/
 *.sqlite
+.lp_doc_cache/
+.lp_plum_cache/
 
 # Data
 /data/
