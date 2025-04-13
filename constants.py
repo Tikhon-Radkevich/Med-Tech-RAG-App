@@ -29,4 +29,3 @@ OLLAMA_PORT = "11434"
 
 LP_DOCLING_COLLECTION_NAME = "lp_docling_collection"
 LP_PLUMBER_COLLECTION_NAME = "lp_plumber_collection"
-
