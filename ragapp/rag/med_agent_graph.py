@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Any
-from enum import Enum
 
 from langgraph.types import Command
 from langgraph.graph import StateGraph, START, END
@@ -9,22 +8,12 @@ from langchain.chat_models import init_chat_model
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
+from ragapp.device import DeviceEnum
 from ragapp.prompts.prompts import (
     device_extractor_system_prompt_formatted,
     retriever_system_prompt,
     retriever_user_prompt,
 )
-
-
-class DeviceEnum(str, Enum):
-    lifepak_15 = "lifepak 15"
-    lifepak_20 = "lifepak 20"
-    mizuho_6800 = "mizuho 6800"
-    philips_m3002 = "philips m3002"
-    defib_misc = "defib misc"
-    philips_m3015 = "philips m3015"
-    philips_m4841 = "philips m4841"
-    philips_v60_vent = "philips v60 vent"
 
 
 class DeviceClassification(BaseModel):

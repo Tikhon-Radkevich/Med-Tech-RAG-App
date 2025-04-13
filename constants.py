@@ -29,18 +29,4 @@ OLLAMA_PORT = "11434"
 
 LP_DOCLING_COLLECTION_NAME = "lp_docling_collection"
 LP_PLUMBER_COLLECTION_NAME = "lp_plumber_collection"
-LP_DEVICES = ("LIFEPAK 15", "LIFEPAK 20")
 
-dummy_full_list_of_devices = [
-    "LIFEPAK 15",
-    "LIFEPAK 20",
-    "Mizuho 6800",
-    "Philips M3002",
-    "Defib Misc",
-    "Philips M3015",
-    "Philips M4841",
-    "Philips V60 Vent",
-]
-dummy_full_list_of_devices_lower = tuple(
-    map(lambda x: x.lower(), dummy_full_list_of_devices)
-)
