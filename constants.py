@@ -22,7 +22,10 @@ TOGETHER_DEEPSEEK_DISTILL_LLAMA_70B_FREE = (
     "together:deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free"
 )
 GROQ_GEMMA_9B = "groq:gemma2-9b-it"
-GROQ_LLAMA_90B = "groq:llama-3.2-90b-vision-preview"
+# GROQ_LLAMA_90B = "groq:llama-3.2-90b-vision-preview" - has been decommissioned
+GROQ_LLAMA_70B = "groq:llama-3.3-70b-versatile"
+GROQ_LLAMA_SCOUT_17B = "groq:meta-llama/llama-4-scout-17b-16e-instruct"
+GROQ_QWEN_32B = "groq:qwen-qwq-32b"
 
 OLLAMA_HOST = "127.0.0.1"
 OLLAMA_PORT = "11434"
