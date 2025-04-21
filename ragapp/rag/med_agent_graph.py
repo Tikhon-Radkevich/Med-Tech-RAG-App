@@ -55,7 +55,9 @@ class AgentQueryState(BaseModel):
     filtered_relevant_documents: RelevantDocumentSet = Field(
         default=None, description="Retrieved documents."
     )
-    execution_error: GraphExecutionError = Field(default=None, description="Error Log")
+    execution_error: GraphExecutionError | None = Field(
+        default=None, description="Error Log"
+    )
     state_kwargs: Optional[Any] = Field(
         default=None, description="Any kwargs to be added in response."
     )
